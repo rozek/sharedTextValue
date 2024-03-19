@@ -29,7 +29,7 @@
   <style name="white-textured-background">
     html, body {
       background-color: white;
-      background-image: url(/common/BinaryTexture_white.jpg);
+      background-image: url(./common/BinaryTexture_white.jpg);
       background-repeat:repeat;
 
       font-family:'Source Sans Pro','Helvetica Neue',Helvetica,Arial,sans-serif;
@@ -41,84 +41,23 @@
       -moz-box-sizing:border-box; -webkit-box-sizing:border-box; box-sizing:border-box;
     }
   </style>
-
   <script name="clear-console">
     if (typeof console.clear === 'function') {
       console.clear()
     }
   </script>
 
-  <script async src="/js/es-module-shims.js"></script>
   <script type="importmap">
   {
     "imports": {
-      "javascript-interface-library":"/js/javascript-interface-library.esm.js",
-      "JIL":                         "/js/javascript-interface-library.esm.js",
+      "javascript-interface-library": "./js/javascript-interface-library.esm.js",
+      "JIL":                          "./js/javascript-interface-library.esm.js",
 
-      "reactive-scriptable-components":"/js/reactive-scriptable-components.modern.js",
-      "RSC":                           "/js/reactive-scriptable-components.modern.js",
-
-      "nacl-fast":"/js/nacl-fast.esm.js",
-      "nacl-util":"/js/nacl-util.esm.js",
-
-      "nanoid":           "/js/nanoid.esm.js",
-      "nanoid-dictionary":"/js/nanoid-dictionary.esm.js",
-
-      "hyperactiv":      "/js/hyperactiv.esm.js",
-      "rozek/hyperactiv":"/js/hyperactiv.esm.js",
-
-      "grapes":"/GrapesJS/grapes.min.js",
-
-      "enable3d": "/js/enable3d.esm.js",
-
-      "yjs":                 "/js/yjs-bundle.esm.js",
-      "lib0":                "/js/lib0/index.js",
-      "lib0/":               "/js/lib0/",
-      "lib0/observable":     "/js/lib0/observable.js",
-      "y-indexeddb":         "/js/yjs-bundle.esm.js",
-      "y-websocket":         "/js/yjs-bundle.esm.js",
-      "y-webrtc":            "/js/yjs-bundle.esm.js",
-      "y-utility/y-keyvalue":"/js/yjs-bundle.esm.js",
-      "y-lwwmap":            "/js/yjs-bundle.esm.js",
-      "y-localforage":       "/js/y-localforage.modern.js",
-      "y-localstorage":      "/js/y-localstorage.modern.js",
-
-      "localforage":"/js/localforage.esm.js",
-
-      "shared-key-value-store":"/js/shared-key-value-store.esm.js",
-
-      "observable-object": "/js/observable-object.esm.js",
-      "observable-array":  "/js/observable-array.esm.js",
-
-      "dommali":              "/js/dommali.esm.js",
-      "goober":               "/js/goober.esm.js",
-      "preact":               "/js/preact-with-htm.esm.js",
-      "preact-with-htm":      "/js/preact-with-htm.esm.js",
-      "htm/preact":           "/js/preact-with-htm.esm.js",
-
-      "preact/compat":        "/js/preact-with-htm.js",
-      "react":                "/js/preact-with-htm.js",
-      "react-dom":            "/js/preact-with-htm.js",
-        "use-sync-external-store/shim":"/js/use-sync-external-store_shim.esm.js",
-
-      "mobx":                 "/js/mobx.esm.js",
-      "mobx-react":           "/js/mobx-react.esm.js",
-      "mobx-react-lite":      "/js/mobx-react-lite.esm.js",
-
-      "preact-custom-element":"/js/preact-custom-element.esm.js",
-      "preact-observables":   "/js/preact-observables.esm.js",
-        "nu-observables":     "/js/nu-observables.esm.js",
-      "deepsignal":           "/js/deepsignal.esm.js",
-      "@preact/signals":      "/js/preact-with-htm.js",
-      "@preact/signals-core": "/js/preact-with-htm.js",
-      "preact/hooks":         "/js/preact-with-htm.js",
-      "deepSignal":           "/js/deepSignal.esm.js",
-      "preact-for-grapesjs":  "/js/preact-for-grapesjs.esm.js",
-      "reef":                 "/js/reef.esm.js"
+      "preact-with-htm": "./js/preact-with-htm-bundle.js",
+      "preact-with-htm/":"./js/preact-with-htm/modules/"
     }
   }
   </script>
-
  </head>
  <body>
 
