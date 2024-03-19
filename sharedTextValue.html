@@ -25,11 +25,10 @@
     html { overflow:hidden scroll }
   </style>
 
-<base href="https://rozek.github.io/sharedTextValue" />
   <style name="white-textured-background">
     html, body {
       background-color: white;
-      background-image: url(./common/BinaryTexture_white.jpg);
+      background-image: url(/common/BinaryTexture_white.jpg);
       background-repeat:repeat;
 
       font-family:'Source Sans Pro','Helvetica Neue',Helvetica,Arial,sans-serif;
@@ -41,6 +40,7 @@
       -moz-box-sizing:border-box; -webkit-box-sizing:border-box; box-sizing:border-box;
     }
   </style>
+
   <script name="clear-console">
     if (typeof console.clear === 'function') {
       console.clear()
@@ -50,19 +50,19 @@
   <script type="importmap">
   {
     "imports": {
-      "javascript-interface-library": "./js/javascript-interface-library.esm.js",
-      "JIL":                          "./js/javascript-interface-library.esm.js",
+      "javascript-interface-library": "/js/javascript-interface-library.esm.js",
+      "JIL":                          "/js/javascript-interface-library.esm.js",
 
-      "preact-with-htm": "./js/preact-with-htm-bundle.js",
-      "preact-with-htm/":"./js/preact-with-htm/modules/"
+      "preact-with-htm": "/js/preact-with-htm-bundle.js",
+      "preact-with-htm/":"/js/preact-with-htm/modules/"
     }
   }
   </script>
  </head>
  <body>
 
-  <script type="module" src="https://rozek.github.io/automerge-bundle/dist/automerge-bundle.js"></script>
-  <script src="https://unpkg.com/javascript-interface-library"></script>
+  <script type="module" src="/js/automerge-bundle.js"></script>
+  <script src="/js/javascript-interface-library"></script>
 
   <script type="module">
 /*******************************************************************************
