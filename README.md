@@ -2,6 +2,8 @@
 
 a simple programming experiment for the Automerge Build Day
 
+![Screenshot](sharedTextValue-Screenshot.png)
+
 The code takes care of the various steps needed to load automerge and either create a new or open an existing document.
 
 Once ready, automerge is used to share a single string (the "TextValue") - but not like in a shared text editor (that will be the next step) but in an LWW fashion - taking care that when several people are working on the same text (ok, in this example there is only one) key strokes on one side won't disturb the input on another side.
