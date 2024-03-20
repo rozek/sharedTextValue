@@ -1,6 +1,6 @@
 # sharedTextValue #
 
-a small programming experiment for the Automerge Build Day ([live demo](https://rozek.de/automerge/sharedTextValue.html))
+a small programming experiment for the Automerge Build Day/1 ([live demo](https://rozek.de/automerge/sharedTextValue.html))
 
 ![Screenshot](sharedTextValue-Screenshot.png)
 
