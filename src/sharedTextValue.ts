@@ -12,19 +12,280 @@
 
   import { render, html, Component } from 'htm/preact'
 
+/**** install stylesheet for SSK ****/
+
+  const Stylesheet = document.createElement('style')
+    Stylesheet.setAttribute('id','sharedTextValue')
+    Stylesheet.innerHTML = `/*******************************************************************************
+*                                                                              *
+*                               shared TextValue                               *
+*                                                                              *
+*******************************************************************************/
+
+  html {
+    width:100%; height:100%; overflow:hidden;
+
+    font-family:'Source Sans Pro','Helvetica Neue',Helvetica,Arial,sans-serif;
+    font-size:14px; font-weight:normal; line-height:1.4; color:black;
+
+    background-color: white;
+    background-image: url(/common/BinaryTexture_white.jpg);
+    background-repeat:repeat;
+
+    -webkit-box-sizing:border-box; -moz-box-sizing:border-box; box-sizing:border-box;
+  }
+  body {
+    width:100%; height:100%; overflow:hidden;
+    margin:0px; padding:0px;
+  }
+
+  :disabled, .disabled {
+    opacity:80%; pointer-events:none;
+  }
+
+/**** ApplicationView ****/
+
+  .ApplicationView {
+    display:flex; position:relative;
+      flex-flow:column nowrap; align-items:stretch;
+    width:480px; height:640px; min-width:480px; min-height:640px;
+    margin:20px auto auto auto;
+    border:solid 1px lightgray; border-radius:8px;
+    box-shadow:0px 0px 20px 0px rgba(0,0,0,0.8);
+    background:white;
+    padding:10px;
+
+    font-family:'Source Sans Pro','Helvetica Neue',Helvetica,Arial,sans-serif;
+    font-size:14px; font-weight:normal; line-height:1.4; color:black;
+
+    -webkit-box-sizing:border-box; -moz-box-sizing:border-box; box-sizing:border-box;
+  }
+
+  .Title {
+    display:block; position:relative;
+    font-size:18px; font-weight:bold;
+  }
+
+  .Separator {
+    display:block; position:relative;
+    width:100%; height:1px;
+    margin:4px 0px 4px 0px;
+    border:none; border-top:solid 1px gray;
+  }
+
+  p {
+    display:block; position:relative;
+    margin:6px 0px 6px 0px;
+    text-align:justify;
+  }
+
+  .ButtonFace {
+    display:inline-block; position:relative;
+    margin:0px 2px 0px 2px; padding:0px 4px 0px 4px;
+    border:solid 1px lightgray; border-radius:4px;
+    background:linear-gradient(180deg, #FFFFFF 0%, #EEEEEE 100%)
+  }
+
+/**** PaneSwitcher ****/
+
+  .PaneSwitcher {
+    display:block; position:relative; flex:1 1 auto;
+  }
+
+/**** CenteringPane ****/
+
+  .CenteringPane {
+    display:block; position:relative;
+    width:100%; height:100%; max-height:240px;
+  }
+
+  .CenteringPane > * {
+    display:block; position:absolute;
+    left:50%; top:50%;
+    transform:translate(-55%,-50%);
+    white-space:nowrap;
+  }
+
+/**** SessionPane ****/
+
+  .SessionPane {
+    display:flex; position:relative;
+      flex-flow:column nowrap; align-items:stretch;
+    width:100%; height:100%;
+  }
+
+/**** MessageView ****/
+
+  .MessageView {
+    display:block; position:relative;
+    width:100%; height:24px;
+    text-align:left; line-height:24px;
+  }`
+  document.head.appendChild(Stylesheet)
+
 /**** make some existing types indexable ****/
 
   interface Indexable { [Key:string]:any }
 
-/**** "global" variables ****/
+/**** Settings and Variables ****/
 
   const DefaultURL = 'automerge:4KJrmBdEJdkfesNUnWzZEMeKkBEK'
 
+  let sharedText:string
+  let MainView:ApplicationView
+  let Message:string = ''
+
+//------------------------------------------------------------------------------
+//--                             Session Handling                             --
+//------------------------------------------------------------------------------
+
+  const SessionStates = [
+    'unprepared','prepared','opening','open','closed','broken'
+  ]
+  let SessionState:typeof SessionStates[number] = 'unprepared'
+
   let sharedRepo:any|undefined
-  let sharedURL:string|undefined = DefaultURL
+  let sharedURL:string|undefined
   let sharedDocHandle:any|undefined
 
-  let MainView:ApplicationView
+  function sharedDoc ():Indexable {
+    return sharedDocHandle.docSync()
+  }
+
+/**** prepareSession ****/
+
+  function prepareSession (DefaultURL:string):void {
+    sharedRepo = new Repo({
+      network: [
+        new BroadcastChannelNetworkAdapter(),
+        new BrowserWebSocketClientAdapter('wss://sync.automerge.org')
+      ],
+      storage: new IndexedDBStorageAdapter(),
+    })
+    SessionState = 'prepared'
+
+    sharedURL = DefaultURL
+  }
+
+/**** createSession ****/
+
+  function createSession ():void {
+    sharedDocHandle = sharedRepo.create()
+    sharedURL       = sharedDocHandle.url
+
+    runSession()
+  }
+
+/**** openSession ****/
+
+  function openSession (SessionURL:string):void {
+    if (! isValidAutomergeUrl(SessionURL)) throw new Error(
+      'InvalidArgument: invalid Automerge URL given'
+    )
+
+    SessionState    = 'opening'
+    sharedDocHandle = sharedRepo.find(sharedURL = SessionURL)
+
+    const thisHandle = sharedDocHandle
+    setTimeout(() => {
+      if (
+        (sharedDocHandle !== thisHandle) ||       // original handle is obsolete
+        (sharedDocHandle.state === 'ready')  // doc has been opened successfully
+      ) { return }
+
+      abortSession()
+
+      handleSessionTimeout(sharedDocHandle.state)
+    },10000)
+
+    sharedDocHandle.whenReady().then(() => {
+      if (sharedDocHandle === thisHandle) { runSession() }
+    })
+  }
+
+/**** runSession ****/
+
+  function runSession ():void {
+    SessionState = 'open'
+
+    sharedDocHandle.on('change',internalize)
+
+    reportChangeLogLength()
+    MainView.rerender()
+  }
+
+/**** closeSession ****/
+
+  function closeSession ():void {
+    sharedDocHandle = undefined
+    sharedURL       = DefaultURL
+
+    SessionState = 'closed'
+  }
+
+/**** abortSession ****/
+
+  function abortSession ():void {
+    sharedDocHandle = undefined
+    sharedURL       = DefaultURL
+
+    SessionState = 'broken'
+  }
+
+/**** handleSessionTimeout ****/
+
+  function handleSessionTimeout (HandleState:string):void {
+    switch (HandleState) {
+      case 'deleted':
+        window.alert('The requested document has been deleted')
+        break
+      case 'unavailable':
+        window.alert('The requested document is not available')
+        break
+      default:
+        window.alert('The requested document took too long to open')
+    }
+    MainView.rerender()
+  }
+
+//------------------------------------------------------------------------------
+//--                            Change Processing                             --
+//------------------------------------------------------------------------------
+
+/**** externalize ****/
+
+  function externalize (Callback:Function):void {
+    if (SessionState != 'open') { return }
+
+    sharedDocHandle.change(Callback)
+
+    reportChangeLogLength()
+    MainView.rerender()
+  }
+
+/**** internalize ****/
+
+  function internalize (Event:any):void {
+    if (SessionState != 'open') { return }
+
+    if (typeof Event.doc.Text === 'string') {
+      sharedText = Event.doc.Text
+      reportChangeLogLength()
+    } else {
+      window.alert('Invalid External Change\n\nThe external data has an invalid type')
+      abortSession()
+    }
+
+    MainView.rerender()
+  }
+
+/**** reportChangeLogLength ****/
+
+  function reportChangeLogLength ():void {
+    const ChangeLogLength = automerge.save(sharedDoc()).length
+    Message = 'current change log length: ' + ChangeLogLength + ' bytes'
+//  MainView.rerender()
+  }
 
 /**** ApplicationView ****/
 
@@ -39,25 +300,41 @@
       (this as Component).setState(this.state + 1)
     }
 
+  /**** render ****/
+
     public render (PropSet:Indexable):any {
-      return html`
-<div style="
-  display:flex; flex-flow:column nowrap; align-items:stretch;
-  width:480px; height:100%;
-">
-  <h2 style="padding-bottom:4px; border-bottom:solid 1px gray">Shared TextValue</h2>
+      return html`<div class="ApplicationView">
+        <div class="Title">Shared TextValue</div>
+        <div class="Separator"/>
 
-  <div>
-    This little programming experiment shares a given text
-    using <a href="https://automerge.org/">Automerge</a>.
-  </div>
+        <p>
+          This little programming experiment shares a given text
+          using <a href="https://automerge.org/">Automerge</a>.
+        </p>
 
-  <div><b>Nota bene: this is not a shared text editor!</b></div>
+        <p>
+          It has been written during the "Automerge Build Day/1" and
+          demonstrates basic session handling and last-write-wins
+          sharing of a single JavaScript string.
+        </p>
 
-  <${PaneSwitcher}/>
+        <p>
+          The source code is available
+          on <a href="https://github.com/rozek/sharedTextValue">GitHub</a>.
+        </p>
 
-  <div style="border-top:solid 1px gray"></div>
-</div>`
+        <p>
+          <b>Nota bene: this is not a shared text editor</b> - later text
+          changes deliberately replace former ones completely. Instead,
+          concurrent changes are detected and the user warned in such a
+          situation.
+        </p>
+
+        <div class="Separator"/>
+          <${PaneSwitcher}/>
+        <div class="Separator"/>
+        <${MessageView}/>
+      </div>`
     }
   }
 
@@ -65,51 +342,30 @@
 
   class PaneSwitcher extends Component {
     public render (PropSet:Indexable):any {
-      return html`
-<div style="flex:1 1 auto">
-<${this.relevantPane}/>
-</div>`
+      return html`<div class="PaneSwitcher">
+        <${this.relevantPane}/>
+      </div>`
     }
 
     public relevantPane ():any {
-      switch (true) {
-// @ts-ignore TS2339 allow "window.automerge"
-        case (window.automerge == null):
-          return html`<${SplashPane}/>`
-        case (sharedDocHandle == null):
-          return html`<${StartPane}/>`
-        case (sharedDocHandle.state === 'deleted'):
-          window.alert('The requested document has been deleted')
-          resetSession()
-          break
-        case (sharedDocHandle.state === 'unavailable'):
-          window.alert('The requested document is not available')
-          resetSession()
-          break
-        case (sharedDocHandle.state !== 'ready'):
-          return html`<${LoadPane}/>`
-        default:
-          return html`<${ApplicationPane}/>`
+      switch (SessionState) {
+        case 'unprepared': return html`<${SplashPane}/>`
+        case 'prepared':   return html`<${SessionSelectionPane}/>`
+        case 'opening':    return html`<${SessionOpeningPane}/>`
+        case 'open':       return html`<${SessionPane}/>`
+        case 'closed':
+        case 'broken':     return html`<${SessionSelectionPane}/>`
       }
     }
   }
 
-/**** centered ****/
+/**** CenteringPane ****/
 
-  class centered extends Component {
+  class CenteringPane extends Component {
     public render (PropSet:Indexable):any {
-      return html`
-<div style="
-  display:inline-block; position:relative;
-  width:100%; height:100%;
-  max-height:240px;
-">
-  <div style="
-    display:block; position:absolute;
-    left:50%; top:50%;
-    transform:translate(-50%,-50%);
-  ">${PropSet.children}</div>
-</div>`
+      return html`<div class="CenteringPane">
+        ${PropSet.children}
+      </div>`
     }
   }
 
@@ -117,18 +373,18 @@
 
   class SplashPane extends Component {
     public render (PropSet:Indexable):any {
-      return html`
-<${centered}>
-  <span style="white-space:nowrap">Automerge is loading, please wait...</span>
-</>`
+      return html`<${CenteringPane}>
+        <span>Automerge is loading, please wait...</span>
+      </>`
     }
   }
 
-/**** StartPane ****/
+/**** SessionSelectionPane ****/
 
-  class StartPane extends Component {
+  class SessionSelectionPane extends Component {
+    public URL:string = sharedURL || ''
+
     public state:number = 0
-    public URL:string   = sharedURL || ''
 
     public rerender ():void {
       (this as Component).setState(this.state + 1)
@@ -160,115 +416,141 @@
         sharedURL = ''
       }
 
-      return html`
-<p>
-  Press <b>[New]</b> to create a new shared document or enter a valid
-  Automerge URL and press <b>[Open]</b> to open an existing one.
-</p>
-
-<table>
- <tr>
-  <td>URL:</td>
-  <td>
-    <input type="text" style="margin:0px 4px 0px 4px; width:320px"
-      placeholder="enter URL here"
-      value=${this.URL}
-      onInput=${(Event) => { this.URL = Event.target.value; this.rerender() }}
-    />
-  </td><td>
-    <button style="width:80px" disabled=${! URLisValid} onClick=${openSession}>Open</button>
-  </td>
- </tr><tr>
-  <td></td>
-  <td>
-    <span style="color:red; margin-left:6px">${URLMessage}</span>
-  </td><td>
-    <button style="width:80px" onClick=${createSession}>New</button>
-  </td>
- </tr>
-</table>`
-    }
-  }
-
-/**** LoadPane ****/
-
-  class LoadPane extends Component {
-    public render (PropSet:Indexable):any {
-      return html`
-<${centered}>
-  <div style="white-space:nowrap">
-    Loading document ${quoted(sharedURL)}
-    <br>
-    please wait...
-  </div>
-</>`
-    }
-  }
-
-/**** ApplicationPane ****/
-
-  class ApplicationPane extends Component {
-    public TextToShow = sharedDocHandle.docSync().Text
-
-    public render (PropSet:Indexable):any {
-      let thisElement = (this as Component).base
-      let TextToShow = (
-        (thisElement != null) && (document.activeElement != null) &&
-        (document.activeElement.tagName === 'TEXTAREA') &&
-        thisElement.contains(document.activeElement)
-        ? this.TextToShow
-        : sharedDocHandle.docSync().Text || ''
-      )
-      let externalChangesPending = (
-        this.TextToShow !== sharedDocHandle.docSync().Text
-      )
-
-      let my = this
-      function onInput (Event) {
-        const TextToShare = Event.target.value
-        sharedDocHandle.change((Doc) => {
-          Doc.Text = my.TextToShow = TextToShare
-        })
+      function onNew ():void {
+        createSession()
+        MainView.rerender()
       }
 
-      function onBlur (Event) {
-        const sharedText = sharedDocHandle.docSync().Text
-        if (sharedText !== TextToShow) {
+      function onOpen ():void {
+        openSession(sharedURL as string)
+        MainView.rerender()
+      }
+
+      return html`<div class="SessionSelectionPane">
+        <p>
+          Press <div class="ButtonFace">New</> to create a new shared
+          document or enter a valid Automerge URL and press
+          <div class="ButtonFace">Open</> to open an existing one.
+        </p>
+
+        <table style="width:100%; height:100%">
+          <tr>
+            <td>URL:</td>
+            <td>
+              <input type="text" style="margin:0px 4px 0px 4px; width:320px"
+                placeholder="enter URL here"
+                value=${this.URL}
+                onInput=${(Event) => { this.URL = Event.target.value; this.rerender() }}
+              />
+            </td><td>
+              <button style="width:80px" disabled=${! URLisValid}
+                onClick=${onOpen}>Open</button>
+            </td>
+          </tr><tr>
+            <td></td>
+            <td>
+              <span style="color:red; margin-left:6px">${URLMessage}</span>
+            </td><td>
+              <button style="width:80px" onClick=${onNew}>New</button>
+            </td>
+          </tr>
+        </table>
+      </div>`
+    }
+  }
+
+/**** SessionOpeningPane ****/
+
+  class SessionOpeningPane extends Component {
+    public render (PropSet:Indexable):any {
+      return html`<${CenteringPane}>
+        <div style="display:inline-block; position:relative">
+          Loading document
+            <div style="height:8px"/>
+          <div style="padding-left:6px">${quoted(sharedURL)}</>
+            <div style="height:8px"/>
+          please wait...
+        </div>
+      </>`
+    }
+  }
+
+/**** SessionPane ****/
+
+  class SessionPane extends Component {
+    public TextToShow:string = sharedDoc().Text || ''
+
+    public render (PropSet:Indexable):any {
+      const my         = (this as Component)
+      const myElement  = my.base
+      const sharedText = sharedDoc().Text || ''
+
+      const isFocused = (
+        (myElement != null) && (document.activeElement != null) &&
+        (document.activeElement.tagName === 'TEXTAREA') &&
+        myElement.contains(document.activeElement)
+      )
+      if (! isFocused) { my.TextToShow = sharedText }
+
+      const externallyChanged = (
+        my.TextToShow !== sharedText
+      )
+
+      function onInput (Event):void {
+        const TextToShare = Event.target.value
+        externalize((Doc) => Doc.Text = my.TextToShow = TextToShare)
+      }
+
+      function onBlur (Event):void {
+        if (externallyChanged) {
           my.TextToShow = sharedText
           MainView.rerender()
         }
       }
 
-      return html`
-<table style="width:100%; margin-top:14px">
- <tr>
-  <td>URL:</td>
-  <td>
-   <input type="text" readonly
-     style="margin-left:4px; width:320px"
-     value=${sharedURL}
-   />
-  </td><td>
-    <button style="width:80px" onClick=${resetSession}>Close</button>
-  </td>
- </tr><tr>
-  <td colspan="3">
-   <textarea style="width:100%; min-height:200px"
-     value=${TextToShow} placeholder="(enter your text here)"
-     onInput=${onInput} onBlur=${onBlur}
-   ></textarea>
-  </td>
- </tr><tr>
-  <td colspan="3">
-   <p>
-    Your input will be immediately shared, but external changes only shown
-    while the text editor does not own the keyboard focus.
-   </p>
-  </td>
- </tr><tr>
-  <td colspan="3">${externalChangesPending ? '(there are external changes pending)' : ''}</td>
- </tr>
-</table>`
+      function onClose ():void {
+        closeSession()
+        MainView.rerender()
+      }
+
+      return html`<div class="SessionPane">
+        <div style="margin:4px 0px 6px 0px">
+          URL:
+          <input type="text" readonly style="margin:0px 4px 0px 4px; width:320px"
+            value=${sharedURL}
+          />
+          <button style="width:80px" onClick=${onClose}>Close</button>
+        </div>
+
+        <textarea style="width:100%; height:100%; flex:1 1 auto; resize:none"
+          value=${my.TextToShow} placeholder="(enter your text here)"
+          onInput=${onInput} onBlur=${onBlur}
+        ></textarea>
+
+        <p>
+          Your input will be immediately shared, but external changes only
+          shown while the text editor does not own the keyboard focus.
+        </p>
+
+        <div style="display:block; height:30px">${
+          externallyChanged
+          ? html`
+              <span style="color:red">Note: there are external changes pending</span>
+              <button style="width:80px; margin-left:10px">Refresh</button>
+            `
+          : ''
+        }</div>
+      </div>`
+    }
+  }
+
+/**** MessageView ****/
+
+  class MessageView extends Component {
+    public render (PropSet:Indexable):any {
+      return html`<div class="MessageView">
+        ${Message}
+      </div>`
     }
   }
 
@@ -282,53 +564,9 @@
 // @ts-ignore TS2339 allow "window.automerge"
     } = window.automerge)
 
-    sharedRepo = new Repo({
-      network: [
-        new BroadcastChannelNetworkAdapter(),
-        new BrowserWebSocketClientAdapter('wss://sync.automerge.org')
-      ],
-      storage: new IndexedDBStorageAdapter(),
-    })
-
+    prepareSession(DefaultURL)
     MainView.rerender()
   }
-/**** createSession ****/
-
-  function createSession () {
-    sharedDocHandle = sharedRepo.create()
-    sharedURL       = sharedDocHandle.url
-
-    sharedDocHandle.on('change',(Event) => {
-      MainView.rerender()
-    })
-
-    MainView.rerender()
-  }
-
-/**** openSession ****/
-
-  function openSession () {
-    sharedDocHandle = sharedRepo.find(sharedURL)
-
-    sharedDocHandle.on('change',(Event) => {
-      MainView.rerender()
-    })
-
-    sharedDocHandle.whenReady().then(() => {
-      MainView.rerender()
-    })
-
-    MainView.rerender()
-  }
-
-/**** resetSession ****/
-
-  function resetSession () {
-    sharedDocHandle = undefined
-    sharedURL       = undefined
-    MainView.rerender()
-  }
-
 
   render(html`<${ApplicationView}/>`,document.body)
 
