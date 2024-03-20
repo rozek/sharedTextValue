@@ -1,6 +1,6 @@
 # sharedTextValue #
 
-a simple programming experiment for the Automerge Build Day
+a small programming experiment for the Automerge Build Day
 
 ![Screenshot](sharedTextValue-Screenshot.png)
 
