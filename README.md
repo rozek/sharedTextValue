@@ -10,7 +10,7 @@ Once ready, automerge is used to share a single string (the "TextValue") - but n
 
 > An important detail worth mentioning: the experiment has not been built using Vite or another bundler but uses my [Automerge bundle](https://github.com/rozek/automerge-bundle) which allows you to use Automerge for plain script elements.
 
-If you want to see a live demo, just navigate to [https://rozek.de/automerge/sharedTextValue.html](https://rozek.de/automerge/sharedTextValue.html)
+If you want to see a live demo, just navigate to [https://rozek.de/automerge/sharedTextValue.html](https://rozek.de/automerge/sharedTextValue.html). Open it twice in two browser windows and see how changes in one window affect the other one - and vice versa.
 
 ## License ##
 
